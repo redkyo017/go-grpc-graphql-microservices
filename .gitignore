@@ -1,0 +1,39 @@
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Binaries and build directories
+bin/
+build/
+dist/
+
+# Coverage reports
+coverage.*
+
+# Logs and traces
+*.log
+*.trace
+
+# Dependency directories
+vendor/
+
+# Editor and IDE settings
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+
+# macOS metadata
+.DS_Store
+
+pkg/mod/
+pkg/sumdb/
