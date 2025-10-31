@@ -49,7 +49,7 @@ func (r *postgresRepository) PutOrder(ctx context.Context, o Order) (err error) 
 	// Insert order
 	_, err = tx.ExecContext(
 		ctx,
-		"INSERT INTO orders(id, created_at, account_id, total_price) VALUES($1, $1, $3, $4)",
+		"INSERT INTO orders(id, created_at, account_id, total_price) VALUES($1, $2, $3, $4)",
 		o.ID,
 		o.CreatedAt,
 		o.AccountID,
@@ -80,15 +80,16 @@ func (r *postgresRepository) GetOrdersForAccount(ctx context.Context, accountID 
 	rows, err := r.db.QueryContext(
 		ctx,
 		`SELECT
-		o.id.
+		o.id,
 		o.created_at,
-		o.account_id.
-		o.total_price::money::numerric::float8,
+		o.account_id,
+		o.total_price::money::numeric::float8,
 		op.product_id,
-		op_quantity
-		FROM orders o JOIN order_products op ON (i.id = op.order_id)
-		WHERE o.account_id  =$1
-		ORDER BY o.id`,
+		op.quantity
+	FROM orders o
+	JOIN order_products op ON (o.id = op.order_id)
+	WHERE o.account_id = $1
+	ORDER BY o.id`,
 		accountID,
 	)
 	if err != nil {

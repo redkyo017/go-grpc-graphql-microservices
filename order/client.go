@@ -2,12 +2,14 @@ package order
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	pb "go_grpc_graphql_microservices/order/pb"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Client struct {
@@ -16,7 +18,7 @@ type Client struct {
 }
 
 func NewClient(url string) (*Client, error) {
-	conn, err := grpc.Dial(url, grpc.WithInsecure())
+	conn, err := dialWithRetry(url)
 	if err != nil {
 		return nil, err
 	}
@@ -100,4 +102,34 @@ func (c *Client) GetOrdersForAccount(ctx context.Context, accountID string) ([]O
 		orders = append(orders, newOrder)
 	}
 	return orders, nil
+}
+
+const (
+	orderDialAttempts   = 20
+	orderDialTimeout    = 3 * time.Second
+	orderDialRetryDelay = 2 * time.Second
+)
+
+func dialWithRetry(target string) (*grpc.ClientConn, error) {
+	var lastErr error
+	for attempt := 1; attempt <= orderDialAttempts; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), orderDialTimeout)
+		conn, err := grpc.DialContext(
+			ctx,
+			target,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithBlock(),
+		)
+		cancel()
+		if err == nil {
+			if attempt > 1 {
+				log.Printf("order: connected to %s after %d attempts", target, attempt)
+			}
+			return conn, nil
+		}
+		lastErr = err
+		log.Printf("order: dial attempt %d/%d to %s failed: %v", attempt, orderDialAttempts, target, err)
+		time.Sleep(orderDialRetryDelay)
+	}
+	return nil, fmt.Errorf("order: unable to connect to %s after %d attempts: %w", target, orderDialAttempts, lastErr)
 }

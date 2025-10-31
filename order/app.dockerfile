@@ -13,8 +13,9 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy the source code
-# COPY . .
+# Copy the source code needed for the order service
+COPY account account
+COPY catalog catalog
 COPY order order
 
 # (Optional) If you have vendor directory:

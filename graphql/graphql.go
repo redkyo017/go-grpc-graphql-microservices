@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"go_grpc_graphql_microservices/account"
 	"go_grpc_graphql_microservices/catalog"
 	"go_grpc_graphql_microservices/order"
@@ -15,6 +18,20 @@ type Server struct {
 }
 
 func NewGraphQLServer(accountURL, catalogURL, orderURL string) (*Server, error) {
+	var missing []string
+	if accountURL == "" {
+		missing = append(missing, "ACCOUNT_SERVICE_URL")
+	}
+	if catalogURL == "" {
+		missing = append(missing, "CATALOG_SERVICE_URL")
+	}
+	if orderURL == "" {
+		missing = append(missing, "ORDER_SERVICE_URL")
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("missing configuration: %s", strings.Join(missing, ", "))
+	}
+
 	// Connect to account service
 	accountClient, err := account.NewClient(accountURL)
 	if err != nil {

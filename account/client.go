@@ -2,9 +2,14 @@ package account
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"time"
+
 	pb "go_grpc_graphql_microservices/account/pb"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Client struct {
@@ -13,7 +18,7 @@ type Client struct {
 }
 
 func NewClient(url string) (*Client, error) {
-	conn, err := grpc.Dial(url, grpc.WithInsecure())
+	conn, err := dialWithRetry(url)
 	if err != nil {
 		return nil, err
 	}
@@ -72,4 +77,34 @@ func (c Client) GetAccounts(ctx context.Context, skip uint64, take uint64) ([]Ac
 		})
 	}
 	return accounts, nil
+}
+
+const (
+	accountDialAttempts   = 20
+	accountDialTimeout    = 3 * time.Second
+	accountDialRetryDelay = 2 * time.Second
+)
+
+func dialWithRetry(target string) (*grpc.ClientConn, error) {
+	var lastErr error
+	for attempt := 1; attempt <= accountDialAttempts; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), accountDialTimeout)
+		conn, err := grpc.DialContext(
+			ctx,
+			target,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithBlock(),
+		)
+		cancel()
+		if err == nil {
+			if attempt > 1 {
+				log.Printf("account: connected to %s after %d attempts", target, attempt)
+			}
+			return conn, nil
+		}
+		lastErr = err
+		log.Printf("account: dial attempt %d/%d to %s failed: %v", attempt, accountDialAttempts, target, err)
+		time.Sleep(accountDialRetryDelay)
+	}
+	return nil, fmt.Errorf("account: unable to connect to %s after %d attempts: %w", target, accountDialAttempts, lastErr)
 }

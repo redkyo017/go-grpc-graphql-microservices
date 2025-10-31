@@ -60,9 +60,22 @@ services:
 
   catalog_db:
     image: docker.elastic.co/elasticsearch/elasticsearch:6.2.4
+    platform: linux/amd64
     environment:
-      ES_JAVA_OPTS: -Xms1g -Xmx1g
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
       discovery.type: single-node
+      xpack.security.enabled: "false"
+      bootstrap.memory_lock: "true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: unless-stopped
+    ports:
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
 
   order_db:
     build:
@@ -73,3 +86,6 @@ services:
       POSTGRES_USER: hunghd
       POSTGRES_PASSWORD: 123456
     restart: unless-stopped
+
+volumes:
+  esdata: {}
